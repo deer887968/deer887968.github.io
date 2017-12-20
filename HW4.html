@@ -214,13 +214,22 @@ function animate() {
   var distance1 = car.position.distanceTo(tower1.position);
   var distance2 = car.position.distanceTo(tower2.position);
   if (distance < 15) {
-      speed = -50;
+      if (speed >= 0) {
+	      speed = -50;}
+      else {
+              speed = 50;}
   }
   if (distance1 < 15) {
-      speed = -50;
+      if (speed >= 0) {
+	      speed = -50;}
+      else {
+              speed = 50;}
   }
   if (distance2 < 15) {
-      speed = -50;
+      if (speed >= 0) {
+	      speed = -50;}
+      else {
+              speed = 50;}
   }
 
   requestAnimationFrame(animate);
