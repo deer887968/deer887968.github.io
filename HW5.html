@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Monospace;
+            background-color: #000;
+            color: #fff;
+            margin: 0px;
+            overflow: hidden;
+        }
+
+        #info {
+            color: #fff;
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            display: block;
+        }
+
+        #info a,
+        .button {
+            color: #f00;
+            font-weight: bold;
+            text-decoration: underline;
+            cursor: pointer
+        }
+    </style>
+</head>
+
+<body>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/OBJLoader.js"></script>
+
+
+    <script>
+		
+		/*class Button {
+			constructor(color, name) {
+				this.on = false;
+				this.hsl = color.getHSL();
+				this.obj = this.makeButton(name);
+			}
+
+			get isOn() {
+				return this.on;
+			}
+
+			toggle() {
+				this.on = !this.on;
+				this.update();
+			}
+
+			update() {
+				if (this.on) {
+					this.obj.scale.set (1,0.5,1);
+					this.obj.children[0].material.color.setHSL (this.hsl.h, 0, 1);
+				}
+				else {
+					this.obj.scale.set(1,1,1);
+					this.obj.children[0].material.color.setHSL (this.hsl.h, this.hsl.s, this.hsl.l);
+				}
+			}
+  
+
+			makeButton(name) {
+				let mesh = new THREE.Mesh(new THREE.BoxGeometry(20, 40, 20),
+				new THREE.MeshLambertMaterial());
+				let button = new THREE.Object3D();
+				button.add(mesh);
+				mesh.material.color.setHSL (this.hsl.h, this.hsl.s, this.hsl.l)
+				mesh.position.y = 20;
+				button.name = name;  // a string
+				return button;
+			}
+
+		}*/
+		
+		var clock = new THREE.Clock();
+		var scene = new THREE.Scene();
+		var camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+		var renderer = new THREE.WebGLRenderer();
+		var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		var mesh;
+		var k = 0;
+		
+		init();
+		animate();
+		
+		function init () {
+		
+			camera.position.set(300, 400, 200);
+			scene.add(camera);
+			
+			buildlamp();
+			
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.setClearColor(0x888888);
+			renderer.autoClear = false;
+			
+			window.addEventListener('resize', onWindowResize, false);
+			
+			document.body.appendChild(renderer.domElement);
+		}
+		
+        function buildlamp () {
+		
+			var onProgress = function (xhr) {
+				if (xhr.lengthComputable) {
+					var percentComplete = xhr.loaded / xhr.total * 100;
+					console.log(Math.round(percentComplete, 2) + '% downloaded');
+				}
+			};
+			
+			var onError = function (xhr) { };
+			
+			var mtlLoader = new THREE.MTLLoader();
+			mtlLoader.load('lamp.mtl', function (materials) {
+			
+				materials.preload();
+				
+				var objLoader = new THREE.OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.load('lamp.obj', function (object) {
+				
+					var theObject = unitize(object, 40);
+					theObject.position.set(0, 0, 0);
+					scene.add (theObject);
+					
+					scene.add (new THREE.BoxHelper (theObject));
+				}, onProgress, onError);
+			});
+		}
+		
+		function unitize(object, targetSize) {
+
+            // find bounding box of 'object'
+            var box3 = new THREE.Box3();
+            box3.setFromObject(object);
+            var size = new THREE.Vector3();
+            size.subVectors(box3.max, box3.min);
+            var center = new THREE.Vector3();
+            center.addVectors(box3.max, box3.min).multiplyScalar(0.5);
+
+            console.log('center: ' + center.x + ', ' + center.y + ', ' + center.z);
+            console.log('size: ' + size.x + ', ' + size.y + ', ' + size.z);
+
+            // uniform scaling according to objSize
+            var objSize = findMax(size);
+            var scaleSet = targetSize / objSize;
+
+            var theObject = new THREE.Object3D();
+            theObject.add(object);
+            object.scale.set(scaleSet, scaleSet, scaleSet);
+            object.position.set(-center.x * scaleSet, -center.y * scaleSet + size.y / 2 * scaleSet, -center.z * scaleSet);
+
+            return theObject;
+
+            // helper function
+            function findMax(v) {
+                if (v.x > v.y) {
+                    return v.x > v.z ? v.x : v.z;
+                } else { // v.y > v.x
+                    return v.y > v.z ? v.y : v.z;
+                }
+            }
+
+        }
+		
+		function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+		
+		function render() {
+            var WW = window.innerWidth;
+            var HH = window.innerHeight;
+
+
+            renderer.setScissor(k, k, WW - 2 * k, HH - 2 * k);
+            renderer.enableScissorTest(true);
+
+            renderer.clear();
+            camera.aspect = WW / 2 / HH;
+            camera.updateProjectionMatrix();
+
+            renderer.setViewport(0, 0, WW / 2, HH);
+            renderer.render(scene, camera);
+        }
+		
+		function animate() {
+            controls.update();
+            var dt = clock.getDelta();
+
+            requestAnimationFrame(animate);
+            render();
+        }
+		
+    </script>
+</body>
+
+</html>
