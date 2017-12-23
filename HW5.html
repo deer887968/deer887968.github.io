@@ -143,7 +143,7 @@
 
 			scene.add(spotLight);
 			
-			spotLight2 = new THREE.SpotLight(0xffffff);
+			spotLight2 = new THREE.SpotLight(0xf4242);
 			spotLight2.position.set(-12, 44, -8);
 
 			spotLight2.angle = 1;
@@ -261,18 +261,17 @@
 			
 			var mtlLoader = new THREE.MTLLoader();
 			mtlLoader.setPath('chair/');
-			mtlLoader.load('tnk500.mtl', function (materials) {
+			mtlLoader.load('viva 2.mtl', function (materials) {
 			
 				materials.preload();
 				
 				var objLoader = new THREE.OBJLoader();
 				objLoader.setMaterials(materials);
 				objLoader.setPath('chair/');
-				objLoader.load('tnk500.obj', function (object) {
+				objLoader.load('viva 2.obj', function (object) {
 					
-					object.castShadow = true;
-					var theObject = unitize(object, 50);
-					theObject.position.set(0, 25, 20);
+					var theObject = unitize(object, 36);
+					theObject.position.set(0, 18, 20);
 					theObject.rotation.x = -Math.PI / 2;
 					theObject.rotation.z = Math.PI;
 					theObject.traverse(function (mesh) {
