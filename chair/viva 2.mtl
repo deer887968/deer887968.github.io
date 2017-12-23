@@ -1,0 +1,32 @@
+# created with pCon.planner
+
+newmtl mat_blackpol45b058e1
+Ka 0.25 0.25 0.25
+Kd 0.25 0.25 0.25
+Ks 0.02 0.02 0.02
+Ns 90
+illum 2
+
+newmtl mat_silverfd5cae64
+Ka 0.75 0.75 0.75
+Kd 0.75 0.75 0.75
+Ks 0.5 0.5 0.5
+Ns 30
+illum 2
+
+newmtl mat_viv00e741998f
+Ka 0.50017399 0.50246602 0.515845
+Kd 1 1 1
+map_Kd 3728fe21.png
+Ks 0.156863 0.156863 0.156863
+Ns 25.6
+illum 2
+
+newmtl mat_viv10d2ef56ab
+Ka 0.50017399 0.50246602 0.515845
+Kd 1 1 1
+map_Kd d98b688e.png
+Ks 0.156863 0.156863 0.156863
+Ns 25.6
+illum 2
+

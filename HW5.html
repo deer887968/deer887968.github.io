@@ -46,7 +46,7 @@
 
     <script>
 		
-		/*class Button {
+		class Button {
 			constructor(color, name) {
 				this.on = false;
 				this.hsl = color.getHSL();
@@ -75,43 +75,131 @@
   
 
 			makeButton(name) {
-				let mesh = new THREE.Mesh(new THREE.BoxGeometry(20, 40, 20),
+				let mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1),
 				new THREE.MeshLambertMaterial());
+				mesh.castShadow = true;
+				mesh.receiveShadow = true;
 				let button = new THREE.Object3D();
 				button.add(mesh);
 				mesh.material.color.setHSL (this.hsl.h, this.hsl.s, this.hsl.l)
-				mesh.position.y = 20;
+				mesh.position.y = 1;
 				button.name = name;  // a string
 				return button;
 			}
-
-		}*/
+			
+		}
 		
-		var clock = new THREE.Clock();
+		//var clock = new THREE.Clock();
 		var scene = new THREE.Scene();
-		var camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+		var camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+		//var light = new THREE.PointLight(0xffffff);
 		var renderer = new THREE.WebGLRenderer();
 		var controls = new THREE.OrbitControls(camera, renderer.domElement);
-		var mesh;
-		var k = 0;
+		
+		var isOn, spotLight, spotLight2;
+		
+		var raycaster = new THREE.Raycaster();
+		var pickables = [];
+		var mouse = new THREE.Vector2();
+		
+		(function() {
+			Math.clamp = function(val,min,max){
+			return Math.min(Math.max(val,min),max);
+		}})();
 		
 		init();
 		animate();
 		
-		function init () {
+		$('button.obj').click(function() {
+			isOn = ! isOn;
+		});
 		
-			camera.position.set(300, 400, 200);
+		function init () {
+			isOn = true;
+			
+			camera.position.z = 500;
 			scene.add(camera);
 			
+			/*light.position.set(100, 300, 200);
+			scene.add(light);*/
+			
+			var light = new THREE.AmbientLight(0x888888); // soft white light
+			scene.add(light);
+
+			//spotlights
+			spotLight = new THREE.SpotLight(0xffffff);
+			spotLight.position.set(100, 300, 100);
+
+			spotLight.angle = Math.PI / 16;
+			spotLight.penumbra = 0.25;
+
+			spotLight.castShadow = true;
+			spotLight.shadow.mapSize.width = 1024;
+			spotLight.shadow.mapSize.height = 1024;
+
+			spotLight.shadow.camera.near = 50;
+			spotLight.shadow.camera.far = 1000;
+			spotLight.shadow.camera.fov = 30;
+
+			scene.add(spotLight);
+			
+			spotLight2 = new THREE.SpotLight(0xffffff);
+			spotLight2.position.set(-12, 44, -8);
+
+			spotLight2.angle = 1;
+			spotLight2.penumbra = 0.25;
+			spotLight2.distance = 25
+
+			spotLight2.castShadow = true;
+			spotLight2.shadow.mapSize.width = 1024;
+			spotLight2.shadow.mapSize.height = 1024;
+
+			spotLight2.shadow.camera.near = 5;
+			spotLight2.shadow.camera.far = 25;
+			spotLight2.shadow.camera.fov = 80;
+			
+			/*var lightHelper = new THREE.SpotLightHelper( spotLight2 );
+			scene.add( lightHelper );
+			var shadowCameraHelper = new THREE.CameraHelper( spotLight2.shadow.camera );
+			scene.add( shadowCameraHelper );*/
+
+			scene.add(spotLight2);
+			
+			//floor
+			var floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200, 140, 140), new THREE.MeshLambertMaterial());
+			floor.rotation.x = -Math.PI / 2;
+			scene.add(floor);
+			
+			let gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+			scene.add(gridXZ);
+			
 			buildlamp();
+			buildchair();
+			buildtable();
+			
+			//button
+			button = new Button(new THREE.Color(0x12ffff), 'cyan');
+			scene.add(button.obj);
+			button.obj.position.set(-10, 32, -4);
+			pickables.push(button.obj);
+			
+			button2 = new Button(new THREE.Color(0xff12ff), 'purple');
+			scene.add(button2.obj);
+			button2.obj.position.set(-12, 32, -4);
+			pickables.push(button2.obj);
+			
+			//shadow
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			floor.receiveShadow = true;
 			
 			renderer.setSize(window.innerWidth, window.innerHeight);
-			renderer.setClearColor(0x888888);
-			renderer.autoClear = false;
+			renderer.setClearColor(0x404040);
 			
-			window.addEventListener('resize', onWindowResize, false);
+			//window.addEventListener('resize', onWindowResize, false);
 			
 			document.body.appendChild(renderer.domElement);
+			document.addEventListener('mousedown', onDocumentMouseDown, false);
 		}
 		
         function buildlamp () {
@@ -126,21 +214,118 @@
 			var onError = function (xhr) { };
 			
 			var mtlLoader = new THREE.MTLLoader();
-			mtlLoader.load('lamp.mtl', function (materials) {
+			mtlLoader.setPath('lamp/');
+			mtlLoader.load('materials.mtl', function (materials) {
 			
 				materials.preload();
 				
 				var objLoader = new THREE.OBJLoader();
 				objLoader.setMaterials(materials);
-				objLoader.load('lamp.obj', function (object) {
-				
-					var theObject = unitize(object, 40);
-					theObject.position.set(0, 0, 0);
+				objLoader.setPath('lamp/');
+				objLoader.load('model.obj', function (object) {
+					
+					object.castShadow = true;
+					var theObject = unitize(object, 20);
+					theObject.position.set(-15, 28, -10);
+					theObject.rotation.y = 1;
+					theObject.traverse(function (mesh) {
+                        if (mesh instanceof THREE.Mesh) {
+                            mesh.material.bumpScale = 0.2;
+                        }
+                    });
 					scene.add (theObject);
 					
-					scene.add (new THREE.BoxHelper (theObject));
+					object.traverse(function (mesh) {
+						if (mesh instanceof THREE.Mesh) {
+							mesh.material.side = THREE.DoubleSide;
+							mesh.castShadow = true;
+							mesh.receiveShadow = true;
+						}
+					});
+					//scene.add (new THREE.BoxHelper (theObject));
 				}, onProgress, onError);
 			});
+			
+		}
+		
+		function buildchair () {
+		
+			var onProgress = function (xhr) {
+				if (xhr.lengthComputable) {
+					var percentComplete = xhr.loaded / xhr.total * 100;
+					console.log(Math.round(percentComplete, 2) + '% downloaded');
+				}
+			};
+			
+			var onError = function (xhr) { };
+			
+			var mtlLoader = new THREE.MTLLoader();
+			mtlLoader.setPath('chair/');
+			mtlLoader.load('tnk500.mtl', function (materials) {
+			
+				materials.preload();
+				
+				var objLoader = new THREE.OBJLoader();
+				objLoader.setMaterials(materials);
+				objLoader.setPath('chair/');
+				objLoader.load('tnk500.obj', function (object) {
+					
+					object.castShadow = true;
+					var theObject = unitize(object, 50);
+					theObject.position.set(0, 25, 20);
+					theObject.rotation.x = -Math.PI / 2;
+					theObject.rotation.z = Math.PI;
+					theObject.traverse(function (mesh) {
+                        if (mesh instanceof THREE.Mesh) {
+                            mesh.material.bumpScale = 0.2;
+                        }
+                    });
+					scene.add(theObject);
+					
+					object.traverse(function (mesh) {
+						if (mesh instanceof THREE.Mesh) {
+							mesh.material.side = THREE.DoubleSide;
+							mesh.castShadow = true;
+							mesh.receiveShadow = true;
+						}
+					});
+					//scene.add (new THREE.BoxHelper (theObject));
+				}, onProgress, onError);
+			});
+			
+		}
+		
+		function buildtable () {
+			
+			var table = new THREE.Object3D();
+			var mat = new THREE.MeshLambertMaterial();
+			var leg1 = new THREE.Mesh(new THREE.BoxGeometry(2, 30, 2), mat);
+			table.add(leg1);
+			leg1.position.set(-20, 15, -15);
+			leg1.castShadow = true;
+			leg1.receiveShadow = true;
+			var leg2 = new THREE.Mesh(new THREE.BoxGeometry(2, 30, 2), mat);
+			table.add(leg2);
+			leg2.position.set(20, 15, -15);
+			leg2.castShadow = true;
+			leg2.receiveShadow = true;
+			var leg3 = new THREE.Mesh(new THREE.BoxGeometry(2, 30, 2), mat);
+			table.add(leg3);
+			leg3.position.set(-20, 15, 15);
+			leg3.castShadow = true;
+			leg3.receiveShadow = true;
+			var leg4 = new THREE.Mesh(new THREE.BoxGeometry(2, 30, 2), mat);
+			table.add(leg4);
+			leg4.position.set(20, 15, 15);
+			leg4.castShadow = true;
+			leg4.receiveShadow = true;
+			var plane = new THREE.Mesh(new THREE.BoxGeometry(50, 2, 40), mat);
+			table.add(plane);
+			plane.position.y = 31;
+			plane.castShadow = true;
+			plane.receiveShadow = true;
+			scene.add(table);
+			
 		}
 		
 		function unitize(object, targetSize) {
@@ -178,6 +363,29 @@
 
         }
 		
+		function onDocumentMouseDown(event) {
+
+			event.preventDefault();
+			mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+			mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+			// find intersections
+			raycaster.setFromCamera(mouse, camera);
+			var intersects = raycaster.intersectObjects(pickables, true);
+			if (intersects.length > 0) {
+				let picked = intersects[0].object.parent.name;
+				switch (picked) {
+					case 'cyan':
+						button.toggle();
+						break;
+					case 'purple':
+						button2.toggle();
+						break;
+				}
+			}
+
+		}
+		
 		function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -196,16 +404,18 @@
             camera.aspect = WW / 2 / HH;
             camera.updateProjectionMatrix();
 
-            renderer.setViewport(0, 0, WW / 2, HH);
+            renderer.setViewport(0, 0, WW, HH);
             renderer.render(scene, camera);
         }
 		
 		function animate() {
+			spotLight.intensity = (isOn === true) ? 1 : 0;
             controls.update();
-            var dt = clock.getDelta();
+            //var dt = clock.getDelta();
 
             requestAnimationFrame(animate);
-            render();
+			renderer.render(scene, camera);
+            //render();
         }
 		
     </script>
